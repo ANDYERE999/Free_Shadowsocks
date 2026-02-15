@@ -53,9 +53,9 @@
 1. 在 GitHub 新建一个 **私有仓库**（Private），名字随意，例如 `my-proxy`
 2. 把以下两个文件放进仓库：
 
-#### 📄 `ssnew3.py`（代理主程序）
+#### 📄 `freeproxy.py`（代理主程序）
 
-把提供的 `ssnew3.py` 文件放到仓库根目录。
+把提供的 `freeproxy.py` 文件放到仓库根目录。
 
 > ⚠️ 建议修改文件中的 `password = "123456"` 为一个强密码，防止被别人扫到盗用。
 
@@ -89,14 +89,14 @@ jobs:
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: modal deploy ssnew3.py
+        run: modal deploy freeproxy.py
 
       - name: Start SS Server (detached)
         timeout-minutes: 2
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: modal run --detach ssnew3.py
+        run: modal run --detach freeproxy.py
 ```
 
 ---
@@ -173,7 +173,7 @@ jobs:
 | 正常使用 | 什么都不用管，GitHub Actions 每天自动重启 |
 | 代理断了 | 去 GitHub Actions 手动点一次 Run workflow |
 | 每日更新 | 每天在 Clash 客户端点击**更新订阅**刷新配置 |
-| 换密码 | 修改 `ssnew3.py` 中的 `password`，推送后重新运行 |
+| 换密码 | 修改 `freeproxy.py` 中的 `password`，推送后重新运行 |
 | 查看状态 | 访问 `/` 端点或 Modal 控制台 |
 
 ---
