@@ -157,6 +157,13 @@ jobs:
 2. 复制 `ss://...` 链接
 3. v2rayN → **服务器** → **从剪贴板导入**
 
+## 验证是否成功。
+
+有很多在线网站均可验证在线IP，如果IP变更为日本，即成功（如下图所示）。
+
+<img width="831" height="194" alt="image" src="https://github.com/user-attachments/assets/c0f71f9e-3995-4422-b996-2b40f1da271d" />
+
+
 ---
 
 ## 🔄 日常使用
