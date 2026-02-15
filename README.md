@@ -44,6 +44,7 @@
 ![创建Token](step2_token.png)
 
 4. 创建后会显示 `Token ID` 和 `Token Secret`，**立即复制保存**（只显示一次）
+<img width="816" height="415" alt="image" src="https://github.com/user-attachments/assets/5313167d-cf09-4d31-86ad-72b86b5891d9" />
 
 ---
 
