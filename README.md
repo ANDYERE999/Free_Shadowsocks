@@ -1,4 +1,4 @@
-# 🚀 免费 Shadowsocks 代理搭建指南
+# 🚀 完全免费 Shadowsocks 代理搭建指南
 
 基于 [Modal](https://modal.com) 云平台 + GitHub Actions 自动运行的免费 Shadowsocks 代理方案。
 
