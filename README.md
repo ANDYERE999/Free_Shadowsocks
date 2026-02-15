@@ -35,26 +35,15 @@
 ### 第一步：注册 Modal 并获取 Token
 
 1. 打开 https://modal.com ，注册并登录
-2. 在本地电脑安装 Modal CLI：
+2. 点击右上角头像 → **Settings**
 
-   ```bash
-   pip install modal
-   ```
+![进入设置](step1_settings.png)
 
-3. 生成 Token：
+3. 左侧选择 **API Tokens** → 点击右上角 **New Token**
 
-   ```bash
-   modal token new
-   ```
+![创建Token](step2_token.png)
 
-   浏览器会弹出授权页面，授权后终端会显示：
-
-   ```
-   MODAL_TOKEN_ID=ak-xxxxxxxxxxxxxxx
-   MODAL_TOKEN_SECRET=as-xxxxxxxxxxxxxxx
-   ```
-
-   **保存好这两个值，后面要用。**
+4. 创建后会显示 `Token ID` 和 `Token Secret`，**立即复制保存**（只显示一次）
 
 ---
 
