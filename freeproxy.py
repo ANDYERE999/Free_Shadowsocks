@@ -2,19 +2,29 @@ import modal
 import yaml
 import base64
 import subprocess
+import json
+import os
 from datetime import datetime
 from fastapi import FastAPI, Response
 
-app = modal.App("ss-proxy-manager")
+app = modal.App("singbox-ss2022-manager")
 
+# 构建镜像：下载并解压现代代理核心 Sing-box
 image = (
     modal.Image.debian_slim()
-    .apt_install("shadowsocks-libev")
+    .apt_install("wget", "tar")
+    .run_commands(
+        "wget -O sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.9.0/sing-box-1.9.0-linux-amd64.tar.gz",
+        "tar -xzf sing-box.tar.gz",
+        "mv sing-box-*/sing-box /usr/local/bin/",
+        "chmod +x /usr/local/bin/sing-box",
+        "rm -rf sing-box*"
+    )
     .pip_install("fastapi[standard]", "pyyaml")
 )
 
-# 用 Modal Dict 在函数间共享代理信息
-proxy_dict = modal.Dict.from_name("ss-proxy-info", create_if_missing=True)
+# 用于在无状态函数间共享节点信息的字典
+proxy_dict = modal.Dict.from_name("singbox-proxy-info", create_if_missing=True)
 
 web_app = FastAPI()
 
@@ -26,17 +36,15 @@ async def clash_subscription():
         return {"error": "No active proxy"}
     
     clash_config = {
-        "port": 7890,
-        "socks-port": 7891,
-        "allow-lan": False,
-        "mode": "Global",
-        "proxies": [info],
-        "proxy-groups": [{
-            "name": "Proxy",
-            "type": "select",
-            "proxies": [info["name"], "DIRECT"]
-        }],
-        "rules": ["MATCH,Proxy"]
+        "proxies": [{
+            "name": info["name"],
+            "type": "ss",
+            "server": info["server"],
+            "port": info["port"],
+            "cipher": info["cipher"],
+            "password": info["password"],
+            "udp": True
+        }]
     }
     return Response(
         content=yaml.dump(clash_config, allow_unicode=True, sort_keys=False),
@@ -49,6 +57,7 @@ async def ss_url():
         info = proxy_dict["proxy_info"]
     except KeyError:
         return {"error": "No active proxy"}
+    # SS 链接标准拼接
     auth = f"{info['cipher']}:{info['password']}"
     auth_b64 = base64.b64encode(auth.encode()).decode()
     return {"ss_url": f"ss://{auth_b64}@{info['server']}:{info['port']}#{info['name']}"}
@@ -57,53 +66,67 @@ async def ss_url():
 async def status():
     try:
         info = proxy_dict["proxy_info"]
-        return {"status": "running", "server": f"{info['server']}:{info['port']}"}
+        return {"status": "Sing-box SS-2022 Running", "server": f"{info['server']}:{info['port']}"}
     except KeyError:
-        return {"status": "no proxy running"}
+        return {"status": "No proxy running"}
 
-# API 端点 — 纯 ASGI，不跑后台线程
+# 提供订阅链接的 API 端点
 @app.function(image=image)
-@modal.asgi_app(label="ss-api")
+@modal.asgi_app(label="singbox-api")
 def api():
     return web_app
 
-# SS 服务器 — 独立长时运行函数
+# 核心代理服务
 @app.function(image=image, timeout=3600 * 24, region="asia-northeast1")
-def run_ss_server():
-    password = "123456"
-    method = "chacha20-ietf-poly1305"  # 用 AEAD 加密
+def run_singbox_server():
+    # ⚠️ 必须填入通过 openssl rand -base64 32 生成的密钥
+    password = "NdM6oU4qIJuOLuMMCXRDyrj3rgNQG2wXwGe/epQKROo="
+    method = "2022-blake3-aes-256-gcm" 
     port = 8388
+    config_path = "/tmp/config.json"
 
-    ss_cmd = [
-        "ss-server",
-        "-s", "0.0.0.0",
-        "-p", str(port),
-        "-k", password,
-        "-m", method,
-        "-t", "300",
-        # 去掉 --fast-open
-    ]
-    process = subprocess.Popen(ss_cmd)
+    # 动态生成 Sing-box 配置文件
+    config = {
+        "log": {"level": "info"},
+        "inbounds": [
+            {
+                "type": "shadowsocks",
+                "tag": "ss-in",
+                "listen": "0.0.0.0",
+                "listen_port": port,
+                "method": method,
+                "password": password
+            }
+        ],
+        "outbounds": [
+            {"type": "direct", "tag": "direct"}
+        ]
+    }
 
+    with open(config_path, "w") as f:
+        json.dump(config, f)
+
+    # 启动 Sing-box 进程
+    process = subprocess.Popen(["sing-box", "run", "-c", config_path])
+
+    # 建立 TCP 隧道暴露端口
     with modal.forward(port, unencrypted=True) as tunnel:
         hostname, tunnel_port = tunnel.tcp_socket
         
-        # 写入共享字典，API 函数可以读取
+        # 写入共享字典，供 API 读取
         proxy_dict["proxy_info"] = {
-            "name": "Modal SS Proxy",
+            "name": "Modal SS-2022",
             "type": "ss",
             "server": hostname,
             "port": tunnel_port,
             "cipher": method,
             "password": password,
-            "udp": True,
             "updated_at": datetime.now().isoformat()
         }
         
-        print(f"✅ SS running at {hostname}:{tunnel_port}")
-        process.wait()  # 阻塞直到进程退出
+        print(f"✅ Sing-box SS-2022 running at {hostname}:{tunnel_port}")
+        process.wait() 
 
 @app.local_entrypoint()
 def main():
-    # 启动 SS 服务器（会阻塞运行）
-    run_ss_server.remote()
+    run_singbox_server.remote()
